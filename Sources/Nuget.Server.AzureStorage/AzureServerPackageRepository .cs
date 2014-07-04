@@ -220,7 +220,7 @@ namespace Nuget.Server.AzureStorage
 
             if (container.Exists())
             {
-                var blobName = this.packageLocator.GetItemName(package);
+                var blobName = package.Version.ToString(); // TODO: this should use this.packageLocator.GetItemName(package), but a) that isn't backwards compatible and b) isn't what AddPackage() does
                 var blob = container.GetBlockBlobReference(blobName);
                 blob.DeleteIfExists();
             }
