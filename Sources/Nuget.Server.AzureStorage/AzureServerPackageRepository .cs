@@ -9,6 +9,7 @@ namespace Nuget.Server.AzureStorage
 {
     using System.Collections.Concurrent;
     using System.IO;
+    using System.Web.Configuration;
 
     using AutoMapper;
     using Microsoft.WindowsAzure;
@@ -72,6 +73,16 @@ namespace Nuget.Server.AzureStorage
         public IHashProvider HashProvider { get; set; }
 
         /// <summary>
+        /// Gets a value indicating if delisting is supported
+        /// </summary>
+        private static bool EnableDelisting {
+            get {
+                // If the setting is misconfigured, treat it as off (backwards compatibility).
+                return GetBooleanAppSetting("enableDelisting", false);
+            }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="AzureServerPackageRepository"/> class.
         /// </summary>
         /// <param name="packageLocator">The package locator.</param>
@@ -94,8 +105,6 @@ namespace Nuget.Server.AzureStorage
         {
             return new Package(package, this.CalculateDerivedData(package));
         }
-
-
 
         private DerivedPackageData CalculateDerivedData(IPackage package) 
         {
@@ -222,7 +231,18 @@ namespace Nuget.Server.AzureStorage
             {
                 var blobName = package.Version.ToString(); // TODO: this should use this.packageLocator.GetItemName(package), but a) that isn't backwards compatible and b) isn't what AddPackage() does
                 var blob = container.GetBlockBlobReference(blobName);
-                blob.DeleteIfExists();
+
+                if (EnableDelisting) 
+                {
+                    blob.FetchAttributes();
+                    blob.Metadata[AzurePackageSerializer.PackageIsListed] = "false";
+                    blob.SetMetadata();
+                }
+                else 
+                {
+                    blob.DeleteIfExists();
+                }
+                
             }
         }
 
@@ -311,6 +331,12 @@ namespace Nuget.Server.AzureStorage
             var latest = container.Metadata[AzurePropertiesConstants.LastUploadedVersion];
 
             return container.GetBlockBlobReference(latest);
+        }
+
+        private static bool GetBooleanAppSetting(string key, bool defaultValue) {
+            var appSettings = WebConfigurationManager.AppSettings;
+            bool value;
+            return !Boolean.TryParse(appSettings[key], out value) ? defaultValue : value;
         }
     }
 }

@@ -19,6 +19,8 @@ namespace Nuget.Server.AzureStorage.Domain.Services
     {
         private const string ReleaseNotesEnc64 = "ReleaseNotesEnc64";
 
+        internal const string PackageIsListed = "Listed";
+
         public AzurePackage ReadFromMetadata(CloudBlockBlob blob)
         {
             blob.FetchAttributes();
@@ -83,7 +85,7 @@ namespace Nuget.Server.AzureStorage.Domain.Services
             {
                 package.MinClientVersion = new Version(blob.Metadata["MinClientVersion"]);
             }
-            package.Listed = blob.Metadata["Listed"].ToBool();
+            package.Listed = blob.Metadata[PackageIsListed].ToBool();
 
             return package;
         }
@@ -167,7 +169,7 @@ namespace Nuget.Server.AzureStorage.Domain.Services
                 blob.Metadata["MinClientVersion"] = package.MinClientVersion.ToString();
             }
 
-            blob.Metadata["Listed"] = package.Listed.ToString();
+            blob.Metadata[PackageIsListed] = package.Listed.ToString();
 
             blob.SetMetadata();
         }
