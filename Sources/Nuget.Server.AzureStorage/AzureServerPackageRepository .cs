@@ -214,7 +214,7 @@ namespace Nuget.Server.AzureStorage
         {
             return this.blobClient
                 .ListContainers()
-                .Select(x => this.packageSerializer.ReadFromMetadata(this.GetLatestBlob(x)))
+                .SelectMany(x => this.GetAllBlobs(x).Select(this.packageSerializer.ReadFromMetadata))
                 .AsQueryable<IPackage>();
         }
 
@@ -331,6 +331,11 @@ namespace Nuget.Server.AzureStorage
             var latest = container.Metadata[AzurePropertiesConstants.LastUploadedVersion];
 
             return container.GetBlockBlobReference(latest);
+        }
+
+        private IEnumerable<CloudBlockBlob> GetAllBlobs(CloudBlobContainer container) {
+            return container.ListBlobs()
+                            .Cast<CloudBlockBlob>();
         }
 
         private static bool GetBooleanAppSetting(string key, bool defaultValue) {
