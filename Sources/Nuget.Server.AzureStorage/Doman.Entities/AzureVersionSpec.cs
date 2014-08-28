@@ -1,36 +1,21 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AzureVersionSpec.cs" company="A-IT">
-//     Copyright (c) A-IT. All rights reserved.
-// </copyright>
-// <author>Szymon M Sasin</author>
-//-----------------------------------------------------------------------
-
-namespace Nuget.Server.AzureStorage.Doman.Entities
-{
-    using NuGet;
+﻿namespace Nuget.Server.AzureStorage.Doman.Entities {
     using System;
 
-    internal sealed class AzureVersionSpec
-    {
-        public AzureVersionSpec()
-        {
+    using NuGet;
 
-        }
+    internal sealed class AzureVersionSpec {
+        public AzureVersionSpec() { }
 
-        public AzureVersionSpec(IVersionSpec version)
-        {
-
+        public AzureVersionSpec(IVersionSpec version) {
             this.IsMaxInclusive = version.IsMaxInclusive;
             this.IsMinInclusive = version.IsMinInclusive;
 
-            if (version.MaxVersion != null)
-            {
+            if (version.MaxVersion != null) {
                 this.MaxVersionSpecial = version.MaxVersion.SpecialVersion;
                 this.MaxVersionVersion = version.MaxVersion.Version.ToString();
             }
 
-            if (version.MinVersion != null)
-            {
+            if (version.MinVersion != null) {
                 this.MinVersionSpecial = version.MinVersion.SpecialVersion;
                 this.MinVersionVersion = version.MinVersion.Version.ToString();
             }
@@ -41,27 +26,24 @@ namespace Nuget.Server.AzureStorage.Doman.Entities
         public bool IsMinInclusive { get; set; }
 
         public string MaxVersionSpecial { get; set; }
+
         public string MaxVersionVersion { get; set; }
 
         public string MinVersionSpecial { get; set; }
+
         public string MinVersionVersion { get; set; }
 
-        public IVersionSpec ToVersionSpec()
-        {
-            var version = new VersionSpec
-            {
-                IsMaxInclusive = this.IsMaxInclusive,
-                IsMinInclusive = this.IsMinInclusive,
-
+        public IVersionSpec ToVersionSpec() {
+            var version = new VersionSpec {
+                IsMaxInclusive = this.IsMaxInclusive, 
+                IsMinInclusive = this.IsMinInclusive, 
             };
 
-            if (this.IsMaxInclusive)
-            {
+            if (this.IsMaxInclusive) {
                 version.MaxVersion = new SemanticVersion(new Version(this.MaxVersionVersion), this.MaxVersionSpecial);
             }
 
-            if (this.IsMinInclusive)
-            {
+            if (this.IsMinInclusive) {
                 version.MinVersion = new SemanticVersion(new Version(this.MinVersionVersion), this.MinVersionSpecial);
             }
 

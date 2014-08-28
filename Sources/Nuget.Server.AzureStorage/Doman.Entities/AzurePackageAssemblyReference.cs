@@ -1,70 +1,61 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="AzurePackageAssemblyReference.cs" company="A-IT">
-//     Copyright (c) A-IT. All rights reserved.
-// </copyright>
-// <author>Szymon M Sasin</author>
-//-----------------------------------------------------------------------
-
-namespace Nuget.Server.AzureStorage.Doman.Entities
-{
-    using NuGet;
+﻿namespace Nuget.Server.AzureStorage.Doman.Entities {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Runtime.Versioning;
 
+    using NuGet;
+
     /// <summary>
-    /// Serializable implementation of PackageAssemblyReference interface.
+    ///     Serializable implementation of PackageAssemblyReference interface.
     /// </summary>
-    internal sealed class AzurePackageAssemblyReference : IPackageAssemblyReference
-    {
+    internal sealed class AzurePackageAssemblyReference : IPackageAssemblyReference {
         /// <summary>
-        /// Gets or sets the name.
+        ///     Gets or sets the name.
         /// </summary>
         /// <value>
-        /// The name.
+        ///     The name.
         /// </value>
         public string Name { get; set; }
 
         /// <summary>
-        /// Gets or sets the effective path.
+        ///     Gets or sets the effective path.
         /// </summary>
         /// <value>
-        /// The effective path.
+        ///     The effective path.
         /// </value>
         public string EffectivePath { get; set; }
 
         /// <summary>
-        /// Gets or sets the path.
+        ///     Gets or sets the path.
         /// </summary>
         /// <value>
-        /// The path.
+        ///     The path.
         /// </value>
         public string Path { get; set; }
 
         /// <summary>
-        /// Gets or sets the target framework.
+        ///     Gets or sets the target framework.
         /// </summary>
         /// <value>
-        /// The target framework.
+        ///     The target framework.
         /// </value>
         public FrameworkName TargetFramework { get; set; }
 
         /// <summary>
-        /// Gets or sets the supported frameworks.
+        ///     Gets or sets the supported frameworks.
         /// </summary>
         /// <value>
-        /// The supported frameworks.
+        ///     The supported frameworks.
         /// </value>
         public IEnumerable<FrameworkName> SupportedFrameworks { get; set; }
 
         /// <summary>
-        /// Gets the stream.
+        ///     Gets the stream.
         /// </summary>
         /// <returns></returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Stream GetStream()
-        {
+        public Stream GetStream() {
             throw new NotImplementedException();
         }
     }

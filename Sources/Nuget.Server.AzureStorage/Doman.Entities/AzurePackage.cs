@@ -1,37 +1,21 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Package.cs" company="A-IT">
-//     Copyright (c) A-IT. All rights reserved.
-// </copyright>
-// <author>Szymon M Sasin</author>
-//-----------------------------------------------------------------------
-
-namespace Nuget.Server.AzureStorage.Doman.Entities
-{
+﻿namespace Nuget.Server.AzureStorage.Doman.Entities {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Runtime.Versioning;
-    using Newtonsoft.Json;
+
     using NuGet;
 
-    public sealed class AzurePackage : IPackage
-    {
-        public AzurePackage()
-        {
-        }
-
-        public IEnumerable<IPackageFile> GetFiles()
-        {
+    public sealed class AzurePackage : IPackage {
+        public IEnumerable<IPackageFile> GetFiles() {
             return null;
         }
 
-        public Stream GetStream()
-        {
+        public Stream GetStream() {
             return null;
         }
 
-        public IEnumerable<FrameworkName> GetSupportedFrameworks()
-        {
+        public IEnumerable<FrameworkName> GetSupportedFrameworks() {
             return null;
         }
 

@@ -1,27 +1,25 @@
-﻿namespace Nuget.Server.AzureStorage
-{
+﻿namespace Nuget.Server.AzureStorage {
     /// <summary>
-    /// Constants for the Azure properties metadata
+    ///     Constants for the Azure properties metadata
     /// </summary>
-    internal sealed class AzurePropertiesConstants
-    {
+    internal sealed class AzurePropertiesConstants {
         /// <summary>
-        /// The created
+        ///     The created
         /// </summary>
         public const string Created = "Creted";
 
         /// <summary>
-        /// The latest modification date
+        ///     The latest modification date
         /// </summary>
         public const string LatestModificationDate = "LastModified";
 
         /// <summary>
-        /// The last uploaded version
+        ///     The last uploaded version
         /// </summary>
         public const string LastUploadedVersion = "LastVersion";
 
         /// <summary>
-        /// The last accessed
+        ///     The last accessed
         /// </summary>
         public const string LastAccessed = "LastAccessed";
 
@@ -30,19 +28,18 @@
         ///// <summary>
         ///// Subset of Constants for Package Metadata.
         ///// </summary>
-        //public sealed class Package
-        //{
-        //    /// <summary>
-        //    /// The identifier
-        //    /// </summary>
-        //    public const string Id = "Package.Id";
+        // public sealed class Package
+        // {
+        // /// <summary>
+        // /// The identifier
+        // /// </summary>
+        // public const string Id = "Package.Id";
 
-        //    /// <summary>
-        //    /// The version
-        //    /// </summary>
-        //    public const string Version = "Package.Version";
-        //}
-
+        // /// <summary>
+        // /// The version
+        // /// </summary>
+        // public const string Version = "Package.Version";
+        // }
         public const string PackageId = "PackageId";
     }
 }

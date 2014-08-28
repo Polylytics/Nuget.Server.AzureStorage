@@ -1,254 +1,168 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="PackageMetadata.cs" company="Aranea It Ltd">
-//     Copyright (c) Aranea It Ltd. All rights reserved.
-// </copyright>
-// <author>Szymon M Sasin</author>
-//-----------------------------------------------------------------------
-
-namespace Nuget.Server.AzureStorage
-{
-    using NuGet;
+﻿namespace Nuget.Server.AzureStorage {
     using System;
     using System.Collections.Generic;
 
+    using NuGet;
+
     /// <summary>
-    /// Implementation of package metadata.
+    ///     Implementation of package metadata.
     /// </summary>
-    internal sealed class PackageMetadata : IPackageMetadata
-    {
+    internal sealed class PackageMetadata : IPackageMetadata {
         /// <summary>
-        /// Gets or sets the authors.
+        ///     Gets or sets the authors.
         /// </summary>
         /// <value>
-        /// The authors.
+        ///     The authors.
         /// </value>
-        public IEnumerable<string> Authors
-        {
-            get;
-            set;
-        }
+        public IEnumerable<string> Authors { get; set; }
 
         /// <summary>
-        /// Gets or sets the copyright.
+        ///     Gets or sets the copyright.
         /// </summary>
         /// <value>
-        /// The copyright.
+        ///     The copyright.
         /// </value>
-        public string Copyright
-        {
-            get;
-            set;
-        }
+        public string Copyright { get; set; }
 
         /// <summary>
-        /// Gets or sets the dependency sets.
+        ///     Gets or sets the dependency sets.
         /// </summary>
         /// <value>
-        /// The dependency sets.
+        ///     The dependency sets.
         /// </value>
-        public IEnumerable<PackageDependencySet> DependencySets
-        {
-            get;
-            set;
-        }
+        public IEnumerable<PackageDependencySet> DependencySets { get; set; }
 
         /// <summary>
-        /// Gets or sets the description.
+        ///     Gets or sets the description.
         /// </summary>
         /// <value>
-        /// The description.
+        ///     The description.
         /// </value>
-        public string Description
-        {
-            get;
-            set;
-        }
+        public string Description { get; set; }
 
         /// <summary>
-        /// Gets or sets the framework assemblies.
+        ///     Gets or sets the framework assemblies.
         /// </summary>
         /// <value>
-        /// The framework assemblies.
+        ///     The framework assemblies.
         /// </value>
-        public IEnumerable<FrameworkAssemblyReference> FrameworkAssemblies
-        {
-            get;
-            set;
-        }
+        public IEnumerable<FrameworkAssemblyReference> FrameworkAssemblies { get; set; }
 
         /// <summary>
-        /// Gets or sets the icon URL.
+        ///     Gets or sets the icon URL.
         /// </summary>
         /// <value>
-        /// The icon URL.
+        ///     The icon URL.
         /// </value>
-        public Uri IconUrl
-        {
-            get;
-            set;
-        }
+        public Uri IconUrl { get; set; }
 
         /// <summary>
-        /// Gets or sets the identifier.
+        ///     Gets or sets the identifier.
         /// </summary>
         /// <value>
-        /// The identifier.
+        ///     The identifier.
         /// </value>
-        public string Id
-        {
-            get;
-            set;
-        }
+        public string Id { get; set; }
 
         /// <summary>
-        /// Gets or sets the language.
+        ///     Gets or sets the language.
         /// </summary>
         /// <value>
-        /// The language.
+        ///     The language.
         /// </value>
-        public string Language
-        {
-            get;
-            set;
-        }
+        public string Language { get; set; }
 
         /// <summary>
-        /// Gets or sets the license URL.
+        ///     Gets or sets the license URL.
         /// </summary>
         /// <value>
-        /// The license URL.
+        ///     The license URL.
         /// </value>
-        public Uri LicenseUrl
-        {
-            get;
-            set;
-        }
+        public Uri LicenseUrl { get; set; }
 
         /// <summary>
-        /// Gets or sets the minimum client version.
+        ///     Gets or sets the minimum client version.
         /// </summary>
         /// <value>
-        /// The minimum client version.
+        ///     The minimum client version.
         /// </value>
-        public Version MinClientVersion
-        {
-            get;
-            set;
-        }
+        public Version MinClientVersion { get; set; }
 
         /// <summary>
-        /// Gets or sets the owners.
+        ///     Gets or sets the owners.
         /// </summary>
         /// <value>
-        /// The owners.
+        ///     The owners.
         /// </value>
-        public IEnumerable<string> Owners
-        {
-            get;
-            set;
-        }
+        public IEnumerable<string> Owners { get; set; }
 
         /// <summary>
-        /// Gets or sets the package assembly references.
+        ///     Gets or sets the package assembly references.
         /// </summary>
         /// <value>
-        /// The package assembly references.
+        ///     The package assembly references.
         /// </value>
-        public ICollection<PackageReferenceSet> PackageAssemblyReferences
-        {
-            get;
-            set;
-        }
+        public ICollection<PackageReferenceSet> PackageAssemblyReferences { get; set; }
 
         /// <summary>
-        /// Gets or sets the project URL.
+        ///     Gets or sets the project URL.
         /// </summary>
         /// <value>
-        /// The project URL.
+        ///     The project URL.
         /// </value>
-        public Uri ProjectUrl
-        {
-            get;
-            set;
-        }
+        public Uri ProjectUrl { get; set; }
 
         /// <summary>
-        /// Gets or sets the release notes.
+        ///     Gets or sets the release notes.
         /// </summary>
         /// <value>
-        /// The release notes.
+        ///     The release notes.
         /// </value>
-        public string ReleaseNotes
-        {
-            get;
-            set;
-        }
+        public string ReleaseNotes { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether [require license acceptance].
+        ///     Gets or sets a value indicating whether [require license acceptance].
         /// </summary>
         /// <value>
-        /// <c>true</c> if [require license acceptance]; otherwise, <c>false</c>.
+        ///     <c>true</c> if [require license acceptance]; otherwise, <c>false</c>.
         /// </value>
-        public bool RequireLicenseAcceptance
-        {
-            get;
-            set;
-        }
+        public bool RequireLicenseAcceptance { get; set; }
 
         /// <summary>
-        /// Gets or sets the summary.
+        ///     Gets or sets the summary.
         /// </summary>
         /// <value>
-        /// The summary.
+        ///     The summary.
         /// </value>
-        public string Summary
-        {
-            get;
-            set;
-        }
+        public string Summary { get; set; }
 
         /// <summary>
-        /// Gets or sets the tags.
+        ///     Gets or sets the tags.
         /// </summary>
         /// <value>
-        /// The tags.
+        ///     The tags.
         /// </value>
-        public string Tags
-        {
-            get;
-            set;
-        }
+        public string Tags { get; set; }
 
         /// <summary>
-        /// Gets or sets the title.
+        ///     Gets or sets the title.
         /// </summary>
         /// <value>
-        /// The title.
+        ///     The title.
         /// </value>
-        public string Title
-        {
-            get;
-            set;
-        }
+        public string Title { get; set; }
 
         /// <summary>
-        /// Gets or sets the version.
+        ///     Gets or sets the version.
         /// </summary>
         /// <value>
-        /// The version.
+        ///     The version.
         /// </value>
-        public SemanticVersion Version
-        {
-            get;
-            set;
-        }
+        public SemanticVersion Version { get; set; }
 
-
-        public bool DevelopmentDependency
-        {
-            get;
-            set;
-        }
+        /// <summary>
+        ///     Gets or sets whether the package is a development dependency
+        /// </summary>
+        public bool DevelopmentDependency { get; set; }
     }
 }
