@@ -2,7 +2,6 @@
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Collections.Specialized;
     using System.Linq;
     using System.Runtime.Versioning;
     using System.Threading.Tasks;
@@ -10,11 +9,7 @@
 
     using AutoMapper;
 
-    using Microsoft.WindowsAzure;
-    using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
-
-    using Ninject;
 
     using NuGet;
 
@@ -26,9 +21,9 @@
     using NuGet.Server.Infrastructure;
 
     /// <summary>
-    ///     An class used to provide diffrent FileSystem to <see cref="ServerPackageRepository" />
+    ///     Implements IServerPackageRepository backed on Azure Blob Storage<see cref="ServerPackageRepository" />
     /// </summary>
-    public class AzureServerPackageRepository : IServerPackageRepository {
+    public class AzureServerPackageRepository : IServerPackageRepository, IPackageLookup {
         private readonly CloudBlobClient blobClient;
 
         private readonly IPackageLocator packageLocator;
@@ -117,18 +112,15 @@
         /// </summary>
         /// <returns></returns>
         public IQueryable<IPackage> GetPackages() {
-            return this.GetPackagesInner().Result.AsQueryable();
-        }
-
-        private async Task<IEnumerable<IPackage>> GetPackagesInner() {
             var containers = this.blobClient.ListContainers().ToArray();
-            
+
             // fetch all the container metadata
-            await Task.WhenAll(containers.Select(c => c.FetchAttributesAsync()));
+            Task.WaitAll(containers.Select(c => c.FetchAttributesAsync()).ToArray());
 
             // ReadFromMetadata could be async too
             return containers.Select(c => this.packageSerializer.ReadFromMetadata(c.GetBlockBlobReference(c.Metadata[AzurePropertiesConstants.LastUploadedVersion])))
-                .Where(p => p.Listed);
+                .Where(p => p.Listed)
+                .AsQueryable();
         }
 
         /// <summary>
@@ -166,54 +158,31 @@
         /// </summary>
         /// <param name="package">The package.</param>
         public void AddPackage(IPackage package) {
-            var name = this.packageLocator.GetContainerName(package);
-            var container = this.blobClient.GetContainerReference(name);
+            var containerName = this.packageLocator.GetContainerName(package);
+            var container = this.blobClient.GetContainerReference(containerName);
 
-            var exists = container.CreateIfNotExists();
-
-            container.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
-            if (!exists) {
+            // create the container if not exists
+            if (!container.CreateIfNotExists()) {
                 container.Metadata[AzurePropertiesConstants.Created] = DateTimeOffset.Now.ToString();
             }
 
+            // update the container metadata
+            container.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
             container.Metadata[AzurePropertiesConstants.LastUploadedVersion] = package.Version.ToString();
             container.Metadata[AzurePropertiesConstants.PackageId] = package.Id;
             container.SetMetadata();
 
-            var blobName = package.Version.ToString();
-
-            // this.packageLocator.GetItemName(package);
+            var blobName = this.packageLocator.GetItemName(package);
             var blob = container.GetBlockBlobReference(blobName);
+
+            // upload the contents
             blob.UploadFromStream(package.GetStream());
             blob.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
-            var azurePackage = Mapper.Map<AzurePackage>(package);
 
-            // blob.Metadata[AzurePropertiesConstants.Package] = JsonConvert.SerializeObject(azurePackage);
+            // save the package metadata into the metadata
+            var azurePackage = Mapper.Map<AzurePackage>(package);
             this.packageSerializer.SaveToMetadata(azurePackage, blob);
             blob.SetMetadata();
-        }
-
-        /// <summary>
-        ///     Removes the package.
-        /// </summary>
-        /// <param name="package">The package.</param>
-        public void RemovePackage(IPackage package) {
-            var name = this.packageLocator.GetContainerName(package);
-            var container = this.blobClient.GetContainerReference(name);
-
-            if (container.Exists()) {
-                var blobName = package.Version.ToString(); // TODO: this should use this.packageLocator.GetItemName(package), but a) that isn't backwards compatible and b) isn't what AddPackage() does
-                var blob = container.GetBlockBlobReference(blobName);
-
-                if (EnableDelisting) {
-                    blob.FetchAttributes();
-                    blob.Metadata[AzurePackageSerializer.PackageIsListed] = "false";
-                    blob.SetMetadata();
-                }
-                else {
-                    blob.DeleteIfExists();
-                }
-            }
         }
 
         /// <summary>
@@ -226,6 +195,55 @@
                 Id = packageId, 
                 Version = version, 
             });
+        }
+
+        /// <summary>
+        ///     Removes the package.
+        /// </summary>
+        /// <param name="package">The package.</param>
+        public void RemovePackage(IPackage package) {
+            var containerName = this.packageLocator.GetContainerName(package);
+            var container = this.blobClient.GetContainerReference(containerName);
+
+            if (!container.Exists()) {
+                return;
+            }
+            
+            var blobName = this.packageLocator.GetItemName(package);
+            var blob = container.GetBlockBlobReference(blobName);
+
+            if (EnableDelisting) {
+                blob.FetchAttributes();
+                blob.Metadata[AzurePackageSerializer.PackageIsListed] = "false";
+                blob.SetMetadata();
+            }
+            else {
+                blob.DeleteIfExists();
+            }
+        }
+
+        public bool Exists(string packageId, SemanticVersion version) {
+            var blob = this.GetPackageBlob(packageId, version);
+            return blob.Exists();
+        }
+
+        public IPackage FindPackage(string packageId, SemanticVersion version) {
+            var blob = this.GetPackageBlob(packageId, version);
+            return this.packageSerializer.ReadFromMetadata(blob);
+        }
+
+        public IEnumerable<IPackage> FindPackagesById(string packageId) {
+            var containerName = this.packageLocator.GetContainerName(packageId);
+            var container = this.blobClient.GetContainerReference(containerName);
+            return container.ListBlobs().Select(item => this.packageSerializer.ReadFromMetadata((CloudBlockBlob) item));
+        }
+
+        private CloudBlockBlob GetPackageBlob(string packageId, SemanticVersion version) {
+            var containerName = this.packageLocator.GetContainerName(packageId);
+            var container = this.blobClient.GetContainerReference(containerName);
+            var blobName = this.packageLocator.GetItemName(packageId, version);
+            var blob = container.GetBlockBlobReference(blobName);
+            return blob;
         }
     }
 }

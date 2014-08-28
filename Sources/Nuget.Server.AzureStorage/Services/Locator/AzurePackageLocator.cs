@@ -3,14 +3,22 @@
 
     internal sealed class AzurePackageLocator : IPackageLocator {
         public string GetContainerName(IPackage package) {
-            return this.GetAzureFriendlyString(package.Id);
+            return GetAzureFriendlyString(package.Id);
+        }
+
+        public string GetContainerName(string packageId) {
+            return GetAzureFriendlyString(packageId);
         }
 
         public string GetItemName(IPackage package) {
-            return this.GetAzureFriendlyString(package.Version.ToString());
+            return package.Version.ToString();
         }
 
-        private string GetAzureFriendlyString(string packageId) {
+        public string GetItemName(string packageId, SemanticVersion version) {
+            return version.ToString();
+        }
+
+        private static string GetAzureFriendlyString(string packageId) {
             return packageId.ToLower()
                             .Replace(".", "-");
         }
