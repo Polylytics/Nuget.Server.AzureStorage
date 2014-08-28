@@ -97,7 +97,7 @@ namespace Nuget.Server.AzureStorage.Services.Package {
             }
 
             // send the data
-            var blob = this.repository.GetLatestBlobForPackage(requestedPackage);
+            var blob = this.repository.GetBlobForPackage(requestedPackage);
             context.Response.AddHeader("content-disposition", string.Format("attachment; filename={0}-{1}.nupkg", requestedPackage.Id, requestedPackage.Version));
             context.Response.ContentType = "application/zip";
             blob.DownloadToStream(context.Response.OutputStream);

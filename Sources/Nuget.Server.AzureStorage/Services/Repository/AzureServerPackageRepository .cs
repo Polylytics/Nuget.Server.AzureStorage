@@ -107,6 +107,14 @@
             return blob;
         }
 
+        public CloudBlockBlob GetBlobForPackage(IPackage package) {
+            var containerName = this.packageLocator.GetContainerName(package);
+            var container = this.blobClient.GetContainerReference(containerName);
+            var blobName = this.packageLocator.GetItemName(package);
+            var blob = container.GetBlockBlobReference(blobName);
+            return blob;
+        }
+
         /// <summary>
         ///     Gets the packages.
         /// </summary>
