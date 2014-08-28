@@ -120,6 +120,14 @@
         /// </summary>
         /// <returns></returns>
         public IQueryable<IPackage> GetPackages() {
+            return this.blobClient.ListContainers()
+                       .SelectMany(c => c.ListBlobs()
+                                         .Select(b => this.packageSerializer.ReadFromMetadata((CloudBlockBlob)b)))
+                       .Where(p => p.Listed)
+                       .AsQueryable();
+        }
+
+        public IQueryable<IPackage> GetLatestPackages() {
             var containers = this.blobClient.ListContainers().ToArray();
 
             // fetch all the container metadata
