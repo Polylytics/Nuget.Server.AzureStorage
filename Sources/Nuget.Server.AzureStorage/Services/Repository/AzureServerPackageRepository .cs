@@ -2,8 +2,10 @@
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Collections.Specialized;
     using System.Linq;
     using System.Runtime.Versioning;
+    using System.Threading.Tasks;
     using System.Web.Configuration;
 
     using AutoMapper;
@@ -27,73 +29,44 @@
     ///     An class used to provide diffrent FileSystem to <see cref="ServerPackageRepository" />
     /// </summary>
     public class AzureServerPackageRepository : IServerPackageRepository {
-        /// <summary>
-        ///     The storage account
-        /// </summary>
-        private readonly CloudStorageAccount storageAccount;
-
-        /// <summary>
-        ///     The BLOB client
-        /// </summary>
         private readonly CloudBlobClient blobClient;
 
-        /// <summary>
-        ///     The package locator
-        /// </summary>
         private readonly IPackageLocator packageLocator;
 
-        /// <summary>
-        ///     The package serializer
-        /// </summary>
         private readonly IAzurePackageSerializer packageSerializer;
 
-        /// <summary>
-        ///     Gets or sets the package save mode.
-        /// </summary>
-        /// <value>
-        ///     The package save mode.
-        /// </value>
-        public PackageSaveModes PackageSaveMode { get; set; }
+        private readonly IHashProvider hashProvider;
 
-        /// <summary>
-        ///     Cache for derived data for each package
-        /// </summary>
         private static readonly ConcurrentDictionary<string, DerivedPackageData> DerivedDataCache = new ConcurrentDictionary<string, DerivedPackageData>();
 
-        /// <summary>
-        ///     HashProvider to calculate the hash of the package
-        /// </summary>
-        [Inject]
-        public IHashProvider HashProvider { get; set; }
+        public PackageSaveModes PackageSaveMode { get; set; }
 
-        /// <summary>
-        ///     Gets a value indicating if delisting is supported
-        /// </summary>
-        private static bool EnableDelisting {
+        public string Source {
             get {
-                // If the setting is misconfigured, treat it as off (backwards compatibility).
-                return GetBooleanAppSetting("enableDelisting", false);
+                return "/";
             }
         }
 
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="AzureServerPackageRepository" /> class.
-        /// </summary>
-        /// <param name="packageLocator">The package locator.</param>
-        /// <param name="packageSerializer">The package serializer.</param>
-        public AzureServerPackageRepository(IPackageLocator packageLocator, IAzurePackageSerializer packageSerializer) {
-            this.packageLocator = packageLocator;
-            this.packageSerializer = packageSerializer;
-            var azureConnectionString = CloudConfigurationManager.GetSetting("StorageConnectionString");
-            this.storageAccount = CloudStorageAccount.Parse(azureConnectionString);
-            this.blobClient = this.storageAccount.CreateCloudBlobClient();
+        public bool SupportsPrereleasePackages {
+            get {
+                return false;
+            }
         }
 
-        /// <summary>
-        ///     Gets the metadata package.
-        /// </summary>
-        /// <param name="package">The package.</param>
-        /// <returns></returns>
+        private static bool EnableDelisting {
+            get {
+                bool value;
+                return bool.TryParse(WebConfigurationManager.AppSettings["enableDelisting"], out value) && value;
+            }
+        }
+        
+        public AzureServerPackageRepository(IPackageLocator packageLocator, IAzurePackageSerializer packageSerializer, IHashProvider hashProvider, CloudBlobClient blobClient) {
+            this.packageLocator = packageLocator;
+            this.packageSerializer = packageSerializer;
+            this.hashProvider = hashProvider;
+            this.blobClient = blobClient;
+        }
+
         public Package GetMetadataPackage(IPackage package) {
             return new Package(package, this.CalculateDerivedData(package));
         }
@@ -107,11 +80,11 @@
 
             var blob = this.GetLatestBlobForPackage(package);
 
-            long length = 0;
+            long length;
             byte[] inArray;
             using (var stream = blob.OpenRead()) {
                 length = stream.Length;
-                inArray = this.HashProvider.CalculateHash(stream);
+                inArray = this.hashProvider.CalculateHash(stream);
             }
 
             derivedPackageData = new DerivedPackageData {
@@ -133,22 +106,29 @@
         public CloudBlockBlob GetLatestBlobForPackage(IPackage package) {
             var containerName = this.packageLocator.GetContainerName(package);
             var container = this.blobClient.GetContainerReference(containerName);
-            var blob = this.GetLatestBlob(container);
+            container.FetchAttributes();
+            var latest = container.Metadata[AzurePropertiesConstants.LastUploadedVersion];
+            var blob = container.GetBlockBlobReference(latest);
             return blob;
         }
 
         /// <summary>
-        ///     Gets the updates.
+        ///     Gets the packages.
         /// </summary>
-        /// <param name="packages">The packages.</param>
-        /// <param name="includePrerelease">if set to <c>true</c> [include prerelease].</param>
-        /// <param name="includeAllVersions">if set to <c>true</c> [include all versions].</param>
-        /// <param name="targetFrameworks">The target frameworks.</param>
-        /// <param name="versionConstraints">The version constraints.</param>
         /// <returns></returns>
-        /// <exception cref="System.NotImplementedException"></exception>
-        public IEnumerable<IPackage> GetUpdates(IEnumerable<IPackageName> packages, bool includePrerelease, bool includeAllVersions, IEnumerable<FrameworkName> targetFrameworks, IEnumerable<IVersionSpec> versionConstraints) {
-            return this.GetUpdatesCore(packages, includePrerelease, includeAllVersions, targetFrameworks, versionConstraints);
+        public IQueryable<IPackage> GetPackages() {
+            return this.GetPackagesInner().Result.AsQueryable();
+        }
+
+        private async Task<IEnumerable<IPackage>> GetPackagesInner() {
+            var containers = this.blobClient.ListContainers().ToArray();
+            
+            // fetch all the container metadata
+            await Task.WhenAll(containers.Select(c => c.FetchAttributesAsync()));
+
+            // ReadFromMetadata could be async too
+            return containers.Select(c => this.packageSerializer.ReadFromMetadata(c.GetBlockBlobReference(c.Metadata[AzurePropertiesConstants.LastUploadedVersion])))
+                .Where(p => p.Listed);
         }
 
         /// <summary>
@@ -168,6 +148,20 @@
         }
 
         /// <summary>
+        ///     Gets the updates.
+        /// </summary>
+        /// <param name="packages">The packages.</param>
+        /// <param name="includePrerelease">if set to <c>true</c> [include prerelease].</param>
+        /// <param name="includeAllVersions">if set to <c>true</c> [include all versions].</param>
+        /// <param name="targetFrameworks">The target frameworks.</param>
+        /// <param name="versionConstraints">The version constraints.</param>
+        /// <returns></returns>
+        /// <exception cref="System.NotImplementedException"></exception>
+        public IEnumerable<IPackage> GetUpdates(IEnumerable<IPackageName> packages, bool includePrerelease, bool includeAllVersions, IEnumerable<FrameworkName> targetFrameworks, IEnumerable<IVersionSpec> versionConstraints) {
+            return this.GetUpdatesCore(packages, includePrerelease, includeAllVersions, targetFrameworks, versionConstraints);
+        }
+
+        /// <summary>
         ///     Adds the package.
         /// </summary>
         /// <param name="package">The package.</param>
@@ -177,25 +171,26 @@
 
             var exists = container.CreateIfNotExists();
 
-            this.UpdateContainerMetadata(package, container, exists);
+            container.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
+            if (!exists) {
+                container.Metadata[AzurePropertiesConstants.Created] = DateTimeOffset.Now.ToString();
+            }
+
+            container.Metadata[AzurePropertiesConstants.LastUploadedVersion] = package.Version.ToString();
+            container.Metadata[AzurePropertiesConstants.PackageId] = package.Id;
+            container.SetMetadata();
 
             var blobName = package.Version.ToString();
 
             // this.packageLocator.GetItemName(package);
             var blob = container.GetBlockBlobReference(blobName);
             blob.UploadFromStream(package.GetStream());
-            this.UpdateBlobMetadata(package, blob);
-        }
+            blob.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
+            var azurePackage = Mapper.Map<AzurePackage>(package);
 
-        /// <summary>
-        ///     Gets the packages.
-        /// </summary>
-        /// <returns></returns>
-        public IQueryable<IPackage> GetPackages() {
-            return this.blobClient.ListContainers()
-                       .SelectMany(x => this.GetAllBlobs(x)
-                                            .Select(this.packageSerializer.ReadFromMetadata))
-                       .AsQueryable<IPackage>();
+            // blob.Metadata[AzurePropertiesConstants.Package] = JsonConvert.SerializeObject(azurePackage);
+            this.packageSerializer.SaveToMetadata(azurePackage, blob);
+            blob.SetMetadata();
         }
 
         /// <summary>
@@ -231,86 +226,6 @@
                 Id = packageId, 
                 Version = version, 
             });
-        }
-
-        /// <summary>
-        ///     Gets the source.
-        /// </summary>
-        /// <value>
-        ///     The source.
-        /// </value>
-        public string Source {
-            get {
-                return "/";
-            }
-        }
-
-        /// <summary>
-        ///     Gets a value indicating whether [supports prerelease packages].
-        /// </summary>
-        /// <value>
-        ///     <c>true</c> if [supports prerelease packages]; otherwise, <c>false</c>.
-        /// </value>
-        public bool SupportsPrereleasePackages {
-            get {
-                return false;
-            }
-        }
-
-        /// <summary>
-        ///     Updates the container metadata.
-        /// </summary>
-        /// <param name="package">The package.</param>
-        /// <param name="container">The container.</param>
-        /// <param name="exists">if set to <c>true</c> [exists].</param>
-        private void UpdateContainerMetadata(IPackage package, CloudBlobContainer container, bool exists) {
-            container.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
-            if (!exists) {
-                container.Metadata[AzurePropertiesConstants.Created] = DateTimeOffset.Now.ToString();
-            }
-
-            container.Metadata[AzurePropertiesConstants.LastUploadedVersion] = package.Version.ToString();
-            container.Metadata[AzurePropertiesConstants.PackageId] = package.Id;
-            container.SetMetadata();
-        }
-
-        /// <summary>
-        ///     Updates the BLOB metadata.
-        /// </summary>
-        /// <param name="package">The package.</param>
-        /// <param name="blob">The BLOB.</param>
-        private void UpdateBlobMetadata(IPackage package, CloudBlockBlob blob) {
-            blob.Metadata[AzurePropertiesConstants.LatestModificationDate] = DateTimeOffset.Now.ToString();
-            var azurePackage = Mapper.Map<AzurePackage>(package);
-
-            // blob.Metadata[AzurePropertiesConstants.Package] = JsonConvert.SerializeObject(azurePackage);
-            this.packageSerializer.SaveToMetadata(azurePackage, blob);
-            blob.SetMetadata();
-        }
-
-        /// <summary>
-        ///     Gets the latest BLOB.
-        /// </summary>
-        /// <param name="container">The container.</param>
-        /// <returns></returns>
-        private CloudBlockBlob GetLatestBlob(CloudBlobContainer container) {
-            container.FetchAttributes();
-            var latest = container.Metadata[AzurePropertiesConstants.LastUploadedVersion];
-
-            return container.GetBlockBlobReference(latest);
-        }
-
-        private IEnumerable<CloudBlockBlob> GetAllBlobs(CloudBlobContainer container) {
-            return container.ListBlobs()
-                            .Cast<CloudBlockBlob>();
-        }
-
-        private static bool GetBooleanAppSetting(string key, bool defaultValue) {
-            var appSettings = WebConfigurationManager.AppSettings;
-            bool value;
-            return !bool.TryParse(appSettings[key], out value)
-                       ? defaultValue
-                       : value;
         }
     }
 }

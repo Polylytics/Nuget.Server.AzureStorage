@@ -1,6 +1,10 @@
 ﻿namespace Nuget.Server.AzureStorage {
     using AutoMapper;
 
+    using Microsoft.WindowsAzure;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Blob;
+
     using NuGet;
     using NuGet.Server;
 
@@ -24,7 +28,9 @@
                                .To<AzurePackageLocator>();
             NinjectBootstrapper.Kernel.Bind<IAzurePackageSerializer>()
                                .To<AzurePackageSerializer>();
-
+            NinjectBootstrapper.Kernel.Bind<CloudBlobClient>()
+                               .ToConstant(CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"))
+                                                              .CreateCloudBlobClient());
             Mapper.CreateMap<IPackage, AzurePackage>();
             Mapper.CreateMap<PackageDependencySet, AzurePackageDependencySet>();
         }
