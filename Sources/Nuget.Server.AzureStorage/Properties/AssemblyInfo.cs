@@ -35,4 +35,4 @@ using WebActivatorEx;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("2.8.2.10")]
 [assembly: AssemblyFileVersion("2.8.2.10")]
-[assembly: PostApplicationStartMethod(typeof(Bootstraper), "SetUp")]
+[assembly: PostApplicationStartMethod(typeof(Bootstrap), "SetUp")]

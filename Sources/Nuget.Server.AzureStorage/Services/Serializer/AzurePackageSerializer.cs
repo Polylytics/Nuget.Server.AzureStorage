@@ -1,0 +1,169 @@
+﻿namespace Nuget.Server.AzureStorage.Services.Serializer {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+
+    using AutoMapper;
+
+    using Microsoft.WindowsAzure.Storage.Blob;
+
+    using Newtonsoft.Json;
+
+    using NuGet;
+
+    using Nuget.Server.AzureStorage.Domain;
+
+    internal sealed class AzurePackageSerializer : IAzurePackageSerializer {
+        private const string ReleaseNotesEnc64 = "ReleaseNotesEnc64";
+
+        internal const string PackageIsListed = "Listed";
+
+        public AzurePackage ReadFromMetadata(CloudBlockBlob blob) {
+            blob.FetchAttributes();
+            var package = new AzurePackage();
+
+            package.Id = blob.Metadata["Id"];
+            package.Version = new SemanticVersion(blob.Metadata["Version"]);
+            if (blob.Metadata.ContainsKey("Title")) {
+                package.Title = blob.Metadata["Title"];
+            }
+
+            if (blob.Metadata.ContainsKey("Authors")) {
+                package.Authors = blob.Metadata["Authors"].Split(',');
+            }
+
+            if (blob.Metadata.ContainsKey("Owners")) {
+                package.Owners = blob.Metadata["Owners"].Split(',');
+            }
+
+            if (blob.Metadata.ContainsKey("IconUrl")) {
+                package.IconUrl = new Uri(blob.Metadata["IconUrl"]);
+            }
+
+            if (blob.Metadata.ContainsKey("LicenseUrl")) {
+                package.LicenseUrl = new Uri(blob.Metadata["LicenseUrl"]);
+            }
+
+            if (blob.Metadata.ContainsKey("ProjectUrl")) {
+                package.ProjectUrl = new Uri(blob.Metadata["ProjectUrl"]);
+            }
+
+            package.RequireLicenseAcceptance = bool.Parse(blob.Metadata["RequireLicenseAcceptance"]);
+            package.DevelopmentDependency = bool.Parse(blob.Metadata["DevelopmentDependency"]);
+            if (blob.Metadata.ContainsKey("Description")) {
+                package.Description = blob.Metadata["Description"];
+            }
+
+            if (blob.Metadata.ContainsKey("Summary")) {
+                package.Summary = blob.Metadata["Summary"];
+            }
+
+            if (blob.Metadata.ContainsKey("ReleaseNotes")) {
+                package.ReleaseNotes = blob.Metadata["ReleaseNotes"];
+            }
+
+            if (blob.Metadata.ContainsKey(ReleaseNotesEnc64)) {
+                package.ReleaseNotes = this.Base64Decode(blob.Metadata[ReleaseNotesEnc64]);
+            }
+
+            if (blob.Metadata.ContainsKey("Tags")) {
+                package.Tags = blob.Metadata["Tags"];
+            }
+
+            var dependencySetContent = blob.Metadata["Dependencies"];
+            dependencySetContent = this.Base64Decode(dependencySetContent);
+            package.DependencySets = JsonConvert.DeserializeObject<IEnumerable<AzurePackageDependencySet>>(dependencySetContent)
+                                                         .Select(x => new PackageDependencySet(x.TargetFramework, x.Dependencies));
+            package.IsAbsoluteLatestVersion = bool.Parse(blob.Metadata["IsAbsoluteLatestVersion"]);
+            package.IsLatestVersion = bool.Parse(blob.Metadata["IsLatestVersion"]);
+            if (blob.Metadata.ContainsKey("MinClientVersion")) {
+                package.MinClientVersion = new Version(blob.Metadata["MinClientVersion"]);
+            }
+
+            package.Listed = bool.Parse(blob.Metadata[PackageIsListed]);
+
+            return package;
+        }
+
+        public void SaveToMetadata(AzurePackage package, CloudBlockBlob blob) {
+            blob.Metadata["Id"] = package.Id;
+
+            if (package.Version == null) {
+                throw new ArgumentException("Package must not have a null Version");
+            }
+
+            blob.Metadata["Version"] = package.Version.ToString();
+
+            if (!string.IsNullOrEmpty(package.Title)) {
+                blob.Metadata["Title"] = package.Title;
+            }
+
+            if (package.Authors != null) {
+                blob.Metadata["Authors"] = string.Join(",", package.Authors);
+            }
+
+            if (package.Owners != null) {
+                blob.Metadata["Owners"] = string.Join(",", package.Owners);
+            }
+
+            if (package.IconUrl != null) {
+                blob.Metadata["IconUrl"] = package.IconUrl.AbsoluteUri;
+            }
+
+            if (package.LicenseUrl != null) {
+                blob.Metadata["LicenseUrl"] = package.LicenseUrl.AbsoluteUri;
+            }
+
+            if (package.ProjectUrl != null) {
+                blob.Metadata["ProjectUrl"] = package.ProjectUrl.AbsoluteUri;
+            }
+
+            blob.Metadata["RequireLicenseAcceptance"] = package.RequireLicenseAcceptance.ToString();
+            blob.Metadata["DevelopmentDependency"] = package.DevelopmentDependency.ToString();
+
+            if (!string.IsNullOrEmpty(package.Description)) {
+                blob.Metadata["Description"] = package.Description;
+            }
+
+            if (!string.IsNullOrEmpty(package.Summary)) {
+                blob.Metadata["Summary"] = package.Summary;
+            }
+
+            if (!string.IsNullOrEmpty(package.ReleaseNotes)) {
+                blob.Metadata[ReleaseNotesEnc64] = this.Base64Encode(package.ReleaseNotes);
+            }
+
+            if (!string.IsNullOrEmpty(package.Tags)) {
+                blob.Metadata["Tags"] = package.Tags;
+            }
+
+            if (package.DependencySets == null) {
+                throw new ArgumentException("Package must not have a null DependencySets");
+            }
+
+            blob.Metadata["Dependencies"] = this.Base64Encode(JsonConvert.SerializeObject(package.DependencySets.Select(Mapper.Map<AzurePackageDependencySet>)));
+
+            blob.Metadata["IsAbsoluteLatestVersion"] = package.IsAbsoluteLatestVersion.ToString();
+            blob.Metadata["IsLatestVersion"] = package.IsLatestVersion.ToString();
+
+            if (package.MinClientVersion != null) {
+                blob.Metadata["MinClientVersion"] = package.MinClientVersion.ToString();
+            }
+
+            blob.Metadata[PackageIsListed] = package.Listed.ToString();
+
+            blob.SetMetadata();
+        }
+
+        private string Base64Encode(string plainText) {
+            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
+        }
+
+        private string Base64Decode(string base64EncodedData) {
+            var base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
+            return Encoding.UTF8.GetString(base64EncodedBytes);
+        }
+    }
+}

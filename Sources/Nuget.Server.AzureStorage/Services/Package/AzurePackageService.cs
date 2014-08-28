@@ -1,10 +1,13 @@
-namespace Nuget.Server.AzureStorage {
+namespace Nuget.Server.AzureStorage.Services.Package {
     using System.Net;
     using System.Web;
     using System.Web.Routing;
 
     using NuGet;
     using NuGet.Server;
+
+    using Nuget.Server.AzureStorage.Services.Repository;
+
     using NuGet.Server.Infrastructure;
 
     /// <summary>
