@@ -11,49 +11,49 @@
         [JsonIgnore]
         public ICollection<PackageDependency> Dependencies {
             get {
-                return (this.SeriazlizableDependencies == null
+                return (this.SerializableDependencies == null
                             ? new PackageDependency[0]
-                            : this.SeriazlizableDependencies.Select(SerializePackageDependency)).ToList();
+                            : this.SerializableDependencies.Select(SerializePackageDependency)).ToList();
             }
 
             set {
-                this.SeriazlizableDependencies = value.Select(x => x.Id + " " + JsonConvert.SerializeObject(new AzureVersionSpec(x.VersionSpec)));
+                this.SerializableDependencies = value.Select(x => x.Id + " " + JsonConvert.SerializeObject(new AzureVersionSpec(x.VersionSpec)));
             }
         }
 
         [JsonIgnore]
         public IEnumerable<FrameworkName> SupportedFrameworks {
             get {
-                return this.SeriazlizableSupportedFrameworks == null
+                return this.SerializableSupportedFrameworks == null
                            ? new FrameworkName[0]
-                           : this.SeriazlizableSupportedFrameworks.Select(x => new FrameworkName(x));
+                           : this.SerializableSupportedFrameworks.Select(x => new FrameworkName(x));
             }
 
             set {
-                this.SeriazlizableSupportedFrameworks = value.Select(x => x.FullName);
+                this.SerializableSupportedFrameworks = value.Select(x => x.FullName);
             }
         }
 
         [JsonIgnore]
         public FrameworkName TargetFramework {
             get {
-                return string.IsNullOrWhiteSpace(this.SeriazlizableTargetFramework)
+                return string.IsNullOrWhiteSpace(this.SerializableTargetFramework)
                            ? null
-                           : new FrameworkName(this.SeriazlizableTargetFramework);
+                           : new FrameworkName(this.SerializableTargetFramework);
             }
 
             set {
                 if (value != null) {
-                    this.SeriazlizableTargetFramework = value.FullName;
+                    this.SerializableTargetFramework = value.FullName;
                 }
             }
         }
 
-        public string SeriazlizableTargetFramework { get; set; }
+        public string SerializableTargetFramework { get; set; }
 
-        public IEnumerable<string> SeriazlizableDependencies { get; set; }
+        public IEnumerable<string> SerializableDependencies { get; set; }
 
-        public IEnumerable<string> SeriazlizableSupportedFrameworks { get; set; }
+        public IEnumerable<string> SerializableSupportedFrameworks { get; set; }
 
         private static PackageDependency SerializePackageDependency(string x) {
             var firstSpace = x.IndexOf(' ');

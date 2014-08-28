@@ -15,7 +15,7 @@
         /// <summary>
         ///     Gets the name of the item.
         /// </summary>
-        /// <param name="pacakge">The package.</param>
+        /// <param name="package">The package.</param>
         /// <returns>Azrure redable name for item in the container</returns>
         string GetItemName(IPackage package);
     }

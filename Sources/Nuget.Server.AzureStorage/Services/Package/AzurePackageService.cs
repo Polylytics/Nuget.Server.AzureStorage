@@ -75,25 +75,32 @@ namespace Nuget.Server.AzureStorage.Services.Package {
         ///     The context.
         /// </param>
         public void DownloadPackage(HttpContextBase context) {
+            // get the route data
             var routeData = RouteTable.Routes.GetRouteData(context);
+            if (routeData == null) {
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                context.Response.StatusDescription = "Bad Request";
+                return;
+            }
 
-            // Get the package file name from the route
+            // get the package data from the route
             var packageId = routeData.GetRequiredString("packageId");
             var version = new SemanticVersion(routeData.GetRequiredString("version"));
 
+            // retrieve the package
             var requestedPackage = this.repository.FindPackage(packageId, version);
-
-            if (requestedPackage != null) {
-                var blob = this.repository.GetLatestBlobForPackage(requestedPackage);
-                context.Response.AddHeader("content-disposition", string.Format("attachment; filename={0}-{1}.nupkg", requestedPackage.Id, requestedPackage.Version));
-                context.Response.ContentType = "application/zip";
-                blob.DownloadToStream(context.Response.OutputStream);
-            }
-            else {
+            if (requestedPackage == null) {
                 // Package not found
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 context.Response.StatusDescription = string.Format("'Package {0} {1}' Not found.", packageId, version);
+                return;
             }
+
+            // send the data
+            var blob = this.repository.GetLatestBlobForPackage(requestedPackage);
+            context.Response.AddHeader("content-disposition", string.Format("attachment; filename={0}-{1}.nupkg", requestedPackage.Id, requestedPackage.Version));
+            context.Response.ContentType = "application/zip";
+            blob.DownloadToStream(context.Response.OutputStream);
         }
     }
 }
